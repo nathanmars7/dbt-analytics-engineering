@@ -1,0 +1,37 @@
+# Example dbt profile for the `analytics` project.
+#
+# Copy this file to ~/.dbt/profiles.yml and replace every <PLACEHOLDER>
+# with your own connection details. This file contains NO real credentials —
+# it is the committable template. The real profiles.yml and any *.p8 key
+# files are git-ignored and must never be committed.
+#
+# One profile, two outputs, so the same models build on either warehouse:
+#   dbt build                     -> DuckDB (local, default)
+#   dbt build --target snowflake  -> Snowflake
+
+analytics:
+  target: dev          # default target when --target is omitted
+
+  outputs:
+
+    # --- Local development on DuckDB ----------------------------------------
+    dev:
+      type: duckdb
+      path: dev.duckdb          # local file, relative to the project root
+      threads: 4
+
+    # --- Snowflake via key-pair auth ----------------------------------------
+    # Hardened service-account pattern: a dedicated least-privilege user,
+    # key-pair (not password) auth, scoped to a sandbox role and database.
+    snowflake:
+      type: snowflake
+      account: "<ORG-ACCOUNT_LOCATOR>"        # e.g. ABCD1234.us-east-1
+      user: "<SERVICE_ACCOUNT_USER>"          # dedicated service account
+      role: "<SANDBOX_ROLE>"                  # least-privilege role
+      database: "<SANDBOX_DATABASE>"          # e.g. SANDBOX
+      warehouse: "<WAREHOUSE>"
+      schema: "<DEV_SCHEMA>"                  # e.g. DEV
+      authenticator: snowflake_jwt
+      private_key_path: "<PATH/TO/rsa_key.p8>"  # git-ignored, never committed
+      # private_key_passphrase: "<PASSPHRASE>"  # only if the key is encrypted
+      threads: 4
