@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: >
+      Staged customers — one row per customer. 1:1 cleanup of the
+      raw_customers seed: renames the primary key and casts types.
+    columns:
+      - name: customer_id
+        description: "Primary key — unique identifier for each customer."
+        data_tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: "Customer's first name."
+      - name: last_name
+        description: "Customer's last name."
+
+  - name: stg_orders
+    description: >
+      Staged orders — one row per order. 1:1 cleanup of the raw_orders
+      seed: renames the primary key and casts types. customer_id is a
+      foreign key to stg_customers.
+    columns:
+      - name: order_id
+        description: "Primary key — unique identifier for each order."
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "Foreign key to stg_customers.customer_id."
+      - name: order_date
+        description: "Date the order was placed."
+      - name: amount
+        description: "Order total in USD."
+      - name: status
+        description: "Order status — one of placed, shipped, completed, returned."

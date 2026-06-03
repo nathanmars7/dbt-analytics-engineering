@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: customer_orders
+    description: >
+      Customer-level order summary — one row per customer. Built from
+      stg_customers LEFT JOIN stg_orders, so customers with no orders
+      appear with zeroed metrics.
+    columns:
+      - name: customer_id
+        description: "Primary key — unique identifier for each customer."
+        data_tests:
+          - unique
+          - not_null
+      - name: full_name
+        description: "Customer's full name (first + last)."
+      - name: total_orders
+        description: "Number of orders placed by the customer (0 if none)."
+      - name: total_spend
+        description: "Sum of order amounts in USD (0 if no orders)."
+      - name: avg_order_value
+        description: "Average order amount in USD (0 if no orders)."
+      - name: completed_orders
+        description: "Count of orders with status = 'completed'."
+      - name: returned_orders
+        description: "Count of orders with status = 'returned'."

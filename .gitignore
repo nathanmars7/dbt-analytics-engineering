@@ -1,0 +1,12 @@
+
+target/
+dbt_packages/
+logs/
+
+# Local DuckDB database — don't publish data files
+*.duckdb
+*.duckdb.wal
+
+# Safety: never commit secrets
+profiles.yml
+*.p8
