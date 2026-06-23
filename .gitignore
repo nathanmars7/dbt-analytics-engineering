@@ -10,3 +10,4 @@ logs/
 # Safety: never commit secrets
 profiles.yml
 *.p8
+dbt_internal_packages/
