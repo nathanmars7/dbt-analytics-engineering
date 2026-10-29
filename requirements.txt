@@ -1,0 +1,4 @@
+# Python dependencies for this dbt project: dbt core plus the DuckDB and Snowflake adapters used in profiles.example.yml
+dbt-core~=1.10.0
+dbt-duckdb~=1.9.0
+dbt-snowflake~=1.9.0
