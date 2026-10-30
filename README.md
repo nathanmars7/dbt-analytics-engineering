@@ -1,59 +1,79 @@
-# analytics
+# dbt analytics engineering
 
-An analytics-engineering project built with **dbt**, running on both **DuckDB** and **Snowflake** from a single codebase.
+A small dbt project that builds the same staging and mart models on either DuckDB (local file, no setup) or Snowflake, selected by dbt target. Two CSV seeds feed two staging views and one customer-level mart, with schema tests on every primary key.
 
-## What it demonstrates
+## At a glance
 
-- **Dual-warehouse from one codebase** — the same models, tests, and lineage build on DuckDB (local, zero-setup) or Snowflake, selected entirely through dbt targets. No per-warehouse forks.
-- **AI-native workflow** — built with [Claude Code](https://claude.com/claude-code) and a set of dbt skills driving model creation, testing, and documentation, with the analyst reviewing each step.
-- **Hardened Snowflake connection** — a dedicated, least-privilege **service account** using **key-pair (JWT) auth** instead of a password, scoped to a sandbox role and database. The private key and real `profiles.yml` are git-ignored; only `profiles.example.yml` (placeholders) is committed.
+| | |
+|---|---|
+| Stack | dbt-core, dbt-duckdb, dbt-snowflake |
+| Warehouse | DuckDB (default `dev` target) or Snowflake (`snowflake` target) |
+| Data | Two seed CSVs: `raw_customers` (6 rows) and `raw_orders` (12 rows) |
+| What it shows | One codebase building on two warehouses, staging to marts layering with `ref()`, `unique` and `not_null` tests, a committable example profile with key-pair auth for Snowflake |
+| Status | Portfolio project, complete. Last verified 2026-06 from the repo contents. |
 
 ## Architecture
 
-![dbt lineage graph: seeds → staging → marts](docs/lineage.png)
+![dbt lineage graph: seeds to staging to marts](docs/lineage.png)
 
 ```
 seeds                staging (views)        marts (table)
-─────                ───────────────        ─────────────
-raw_customers  ──►   stg_customers   ──┐
-                                       ├──►  customer_orders
-raw_orders     ──►   stg_orders      ──┘
+-----                ---------------        -------------
+raw_customers  -->   stg_customers   --+
+                                       +-->  customer_orders
+raw_orders     -->   stg_orders      --+
 ```
 
-- **seeds/** — `raw_customers`, `raw_orders` (CSV sample data).
-- **staging/** — `stg_customers`, `stg_orders`: 1:1 cleanup of the seeds (rename keys, cast types), materialized as **views**. `unique` + `not_null` tests on each primary key.
-- **marts/** — `customer_orders`: one row per customer, built from `stg_customers LEFT JOIN stg_orders` so customers with no orders appear with zeroed metrics. Materialized as a **table**, with `unique` + `not_null` tests on `customer_id`.
-- Models reference each other with `ref()`, so dbt resolves the full DAG and lineage automatically.
+- `seeds/`: `raw_customers.csv`, `raw_orders.csv`.
+- `models/staging/`: 1:1 cleanup of the seeds (rename keys, cast types), materialized as views per `dbt_project.yml`.
+- `models/marts/`: `customer_orders`, materialized as a table.
+- `profiles.example.yml`: one profile, two outputs. The Snowflake output uses a dedicated service-account user with `snowflake_jwt` key-pair auth, scoped to a sandbox role and database. The real `profiles.yml`, `*.p8` keys and `*.duckdb` files are git-ignored.
 
-## Tech stack
+`analyses/`, `macros/`, `snapshots/` and `tests/` exist but are empty.
 
-`dbt-core` · `dbt-duckdb` · `dbt-snowflake` · **DuckDB** · **Snowflake**
-
-## How to run
+## Run it
 
 ```bash
-# 1. Clone
-git clone <repo-url> && cd analytics
+git clone https://github.com/nathanmars7/dbt-analytics-engineering.git
+cd dbt-analytics-engineering
 
-# 2. Install dbt and both adapters (a virtualenv is recommended)
-pip install dbt-core dbt-duckdb dbt-snowflake
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 
-# 3. Configure your connection
+# Profile: the default target is DuckDB and needs no edits.
+# Fill in the Snowflake placeholders only if you want that target.
+mkdir -p ~/.dbt
 cp profiles.example.yml ~/.dbt/profiles.yml
-#    then edit ~/.dbt/profiles.yml and fill in your own values
 
-# 4. Build (defaults to the local DuckDB target)
-dbt seed          # load the CSV seeds
-dbt build         # run models + tests
-dbt docs generate # build the docs site (then: dbt docs serve)
+dbt seed            # load the two CSVs
+dbt build           # run models and tests
+dbt docs generate   # then: dbt docs serve
 ```
 
-Add `--target snowflake` to any command to run against Snowflake instead of DuckDB:
+Add `--target snowflake` to any command to run against Snowflake instead:
 
 ```bash
 dbt build --target snowflake
 ```
 
-## Data note
+There is no `packages.yml`, so `dbt deps` is not needed.
 
-The seeds are currently small sample data, enough to exercise the models, tests, and dual-warehouse lineage end to end. The roadmap is to swap in real payments/transactions data, keeping the same staging → marts structure.
+## Models
+
+| Model | Materialization | Description |
+|---|---|---|
+| `stg_customers` | view | One row per customer from `raw_customers`; renames `id` to `customer_id` and casts types. Tests: `unique`, `not_null` on `customer_id`. |
+| `stg_orders` | view | One row per order from `raw_orders`; renames `id` to `order_id`, casts `order_date`, `amount` and `status`. Tests: `unique`, `not_null` on `order_id`. |
+| `customer_orders` | table | One row per customer from `stg_customers LEFT JOIN stg_orders`, so customers with no orders appear with zeroed metrics: `total_orders`, `total_spend`, `avg_order_value`, `completed_orders`, `returned_orders`. Tests: `unique`, `not_null` on `customer_id`. |
+
+## Portfolio
+
+Part of a set of data engineering portfolio projects:
+
+- https://github.com/nathanmars7/dbt-analytics-engineering : dbt on DuckDB and Snowflake from one codebase (this repo)
+- https://github.com/nathanmars7/jaffle-shop-snowflake : minimal dbt starter on Snowflake
+- https://github.com/nathanmars7/dbt-nyc-citibike : dbt on BigQuery, Citibike ridership vs weather
+- https://github.com/nathanmars7/dbt-crypto-bitcoin : dbt on BigQuery with snapshots, Bitcoin transactions
+- https://github.com/nathanmars7/dbt-learning : dbt on BigQuery, Chicago taxi trips, incremental models
+- https://github.com/nathanmars7/pyspark-fraud-pipeline : PySpark and Delta Lake medallion pipeline on Databricks
